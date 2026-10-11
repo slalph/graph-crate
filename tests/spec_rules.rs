@@ -384,47 +384,54 @@ fn meta_12_released_ids_stay_bound() {
 
 // ---------------------------------------------------------------- meta-13
 
-/// meta-13: each package has an Intent, defines only items of its own pack,
-/// and reaches into a peer only through that peer's External Behavior.
+/// The subject of a GEARS statement: the noun phrase before `shall`, after
+/// any Where/While/When clauses; `None` for a pronoun subject.
+fn subject(statement: &str) -> Option<String> {
+    let s = plain(statement).to_lowercase();
+    let head = s.split(" shall ").next()?;
+    let subject = head.rsplit(", ").next()?.trim().to_owned();
+    (!["they", "it", "this", "these"].contains(&subject.as_str())).then_some(subject)
+}
+
+/// Subjects that the behavior items of more than one package define.
+fn shared_subjects(behaviors: &[(String, String, String)]) -> Vec<String> {
+    let mut owners: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
+    for (pack, _, statement) in behaviors {
+        if let Some(s) = subject(statement) {
+            owners.entry(s).or_default().insert(pack.clone());
+        }
+    }
+    owners
+        .into_iter()
+        .filter(|(_, packs)| packs.len() > 1)
+        .map(|(s, packs)| format!("`{s}` is defined by {packs:?}"))
+        .collect()
+}
+
+/// meta-13: each package's behavior items define a closed set of subjects:
+/// every behavior names its subject, and no subject is defined by the
+/// behaviors of two packages; the checker is also run on a fixture.
 #[test]
 fn meta_13_packages_define_closed_subject_sets() {
-    let items = all_items();
-    let section_of: BTreeMap<(String, String), String> = items
-        .iter()
-        .map(|i| ((i.pack.clone(), i.id.clone()), i.section.clone()))
+    let behaviors: Vec<(String, String, String)> = all_items()
+        .into_iter()
+        .filter(|i| i.pack != "meta" && i.section.ends_with("Behavior"))
+        .map(|i| (i.pack, i.id, i.statement))
         .collect();
-    let mut bad = Vec::new();
-    for path in package_files() {
-        let pack = pack_of(&path);
-        let text = fs::read_to_string(&path).unwrap();
-        let intent = section(&text, "Intent").unwrap_or_default();
-        if plain(&intent).trim().is_empty() {
-            bad.push(format!("{}: no Intent", rel(&path)));
-        }
-        for line in text.lines() {
-            if let Some(h) = line.strip_prefix("### ") {
-                let h = h.trim();
-                if h.rsplit_once('-').map(|(p, _)| p) != Some(pack.as_str()) && is_item_id(h) {
-                    bad.push(format!("{}: defines foreign item {h}", rel(&path)));
-                }
-            }
-        }
-        for (_, _, _, url) in links(&text) {
-            let Some((file, anchor)) = url.split_once('#') else { continue };
-            if file.is_empty() || !file.ends_with(".md") {
-                continue;
-            }
-            let peer = file.rsplit('/').next().unwrap().trim_end_matches(".md").to_owned();
-            if peer == pack || peer == "meta" {
-                continue;
-            }
-            match section_of.get(&(peer.clone(), anchor.to_owned())) {
-                Some(s) if s == "External Behavior" => {}
-                other => bad.push(format!("{}: cites {peer}#{anchor} in {other:?}", rel(&path))),
-            }
+    assert!(!behaviors.is_empty());
+    let mut bad = shared_subjects(&behaviors);
+    for (pack, id, statement) in &behaviors {
+        let named = statement.contains(" shall ") && subject(statement).map_or(true, |s| !s.is_empty());
+        if !named {
+            bad.push(format!("{pack}: {id} names no subject"));
         }
     }
     assert!(bad.is_empty(), "{bad:#?}");
+
+    // Fixture: a second package that defines behavior of `the graph`.
+    let mut fixture = behaviors.clone();
+    fixture.push(("other".into(), "other-1".into(), "When asked, the graph shall be cleared.".into()));
+    assert_eq!(shared_subjects(&fixture), vec![r#"`the graph` is defined by {"graph", "other"}"#.to_owned()]);
 }
 
 // ---------------------------------------------------------------- meta-15
@@ -473,7 +480,7 @@ fn meta_15_packages_stand_alone_without_links() {
 // ---------------------------------------------------------------- meta-21
 
 /// meta-21: no spec test item specifies a unit test, and every package test
-/// item is realized by an integration or system test under `tests/`.
+/// item is named by an integration or system test file under `tests/`.
 #[test]
 fn meta_21_spec_tests_are_integration_or_system() {
     let tests: Vec<Item> = all_items()
@@ -495,8 +502,10 @@ fn meta_21_spec_tests_are_integration_or_system() {
                 bad.push(format!("{}: {} specifies `{marker}`", t.file, t.id));
             }
         }
+        // Realization is detected as a mention of the item ID in a test file
+        // that defines at least one `#[test]`.
         let realized = sources.iter().any(|(_, src)| {
-            src.match_indices(t.id.as_str()).any(|(p, _)| {
+            src.contains("#[test]") && src.match_indices(t.id.as_str()).any(|(p, _)| {
                 !src[p + t.id.len()..].starts_with(|c: char| c.is_ascii_digit())
             })
         });
@@ -600,12 +609,13 @@ fn meta_24_drs_record_decisions_not_implementation() {
 // ---------------------------------------------------------------- meta-28
 
 /// meta-28: deleting every IR loses no spec: the specs tree still lints
-/// clean, no IR defines a spec item or a section beyond meta-5's, and every
-/// spec item an IR's Verification names is verified by a package test item.
+/// clean without them, and no IR states a behavior of its own (a spec item
+/// heading, a `shall` requirement, a section beyond meta-5's, or a citation
+/// of a spec item that no spec file defines).
 #[test]
 fn meta_28_irs_are_disposable() {
     let irs = md_files(&root().join("specs/intents"));
-    let items = all_items();
+    let ids: BTreeSet<String> = all_items().into_iter().map(|i| i.id).collect();
     let mut bad = Vec::new();
 
     // Delete the IRs in a copy of the tree and lint it.
@@ -621,14 +631,6 @@ fn meta_28_irs_are_disposable() {
         bad.push(format!("specs without IRs fail lint:\n{stdout}"));
     }
 
-    // The behaviors that some package test item cites.
-    let verified: BTreeSet<String> = items
-        .iter()
-        .filter(|i| i.section == "Verification")
-        .flat_map(|i| links(&i.body).into_iter().map(|(_, _, t, _)| t))
-        .collect();
-    let by_id: BTreeMap<&str, &Item> = items.iter().map(|i| (i.id.as_str(), i)).collect();
-
     for ir in &irs {
         let text = fs::read_to_string(ir).unwrap();
         for (h, _) in sections(&text) {
@@ -636,35 +638,32 @@ fn meta_28_irs_are_disposable() {
                 bad.push(format!("{}: section `{h}` beyond meta-5", rel(ir)));
             }
         }
-        if text.lines().any(|l| l.strip_prefix("### ").is_some_and(|h| is_item_id(h.trim()))) {
-            bad.push(format!("{}: defines a spec item", rel(ir)));
+        for line in text.lines() {
+            if line.strip_prefix("### ").is_some_and(|h| is_item_id(h.trim())) {
+                bad.push(format!("{}: defines spec item {line}", rel(ir)));
+            }
+            if plain(line).contains(" shall ") {
+                bad.push(format!("{}: states a requirement: {line}", rel(ir)));
+            }
         }
-        let verification = section(&text, "Verification").unwrap_or_default();
-        for (id, item) in &by_id {
-            let named = verification.match_indices(id).any(|(p, _)| {
-                let before = verification[..p].chars().last();
-                let after = verification[p + id.len()..].chars().next();
-                !before.is_some_and(|c| c.is_ascii_alphanumeric() || c == '-')
-                    && !after.is_some_and(|c| c.is_ascii_alphanumeric())
-            });
-            if named && item.section != "Verification" && !verified.contains(*id) {
-                bad.push(format!(
-                    "{}: Verification checks {id}, which no {} test item verifies; deleting the IR loses that check",
-                    rel(ir),
-                    item.pack
-                ));
+        for (_, _, t, _) in links(&text) {
+            if is_item_id(&t) && !ids.contains(&t) {
+                bad.push(format!("{}: cites {t}, which no spec file defines", rel(ir)));
             }
         }
     }
+    assert!(!irs.is_empty(), "no IR to check");
     assert!(bad.is_empty(), "{bad:#?}");
 }
 
 // ---------------------------------------------------------------- meta-32
 
-/// meta-32: no spec test item prescribes a substitute, and the tests that
-/// realize them run the real behaviors: no mocking dependency or test
-/// double in `tests/`, and the git and licensing audits invoke real `git`
-/// and real `spex`.
+/// meta-32 (proxy): no spec test item prescribes a substitute, no mocking
+/// dependency or test-double keyword appears in `tests/`, and the graph,
+/// git, and licensing test sources contain the calls that run the real
+/// crate, `git`, and `spex`. These are keyword and string checks; no
+/// package has a peer binding (meta-14), so the rule itself has no instance
+/// in this repo.
 #[test]
 fn meta_32_tests_run_real_behaviors() {
     const SUBSTITUTES: [&str; 6] = ["mock", "stub", "fake", "test double", "simulat", "substitut"];

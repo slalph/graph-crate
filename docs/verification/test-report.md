@@ -26,13 +26,14 @@ Environment: macOS 27.0.1, rustc and cargo 1.96.1, git 2.54.0, Spex CLI 3.0.0 (`
 | `tests/graph_spec.rs` | integration (public API) | 5 | 5 | 0 | 0 |
 | `tests/licensing_headers.rs` | system (repo files) | 6 | 3 | 3 | 0 |
 | `tests/shortest_path.rs` | integration (public API) | 1 | 1 | 0 | 0 |
-| `tests/spec_rules.rs` (new) | system (specs tree, git, `spex lint`) | 12 | 11 | 1 | 0 |
+| `tests/spec_rules.rs` (new) | system (specs tree, git, `spex lint`) | 12 | 12 | 0 | 0 |
 | `tests/spec_tree.rs` | system (specs tree, incl. `spex lint`) | 5 | 4 | 1 | 0 |
 | Doc-tests | doc example | 1 | 1 | 0 | 0 |
-| **Total** | | **43** | **38** | **5** | **0** |
+| **Total** | | **43** | **39** | **4** | **0** |
 
 New tests: 12 in 1 file (`tests/spec_rules.rs`), one for each meta item the previous run left Uncovered.
 Before this run the suite had 31 tests: 27 passed and 4 failed, the same 4 that fail below.
+The first audit round led to rewritten tests for meta-13, meta-21, and meta-28, and to corrected gap statements for meta-13, meta-21, meta-28, and meta-32 (see [Audit corrections](#audit-corrections)).
 
 ## Failures
 
@@ -66,19 +67,8 @@ behaviors no Verification item cites: ["specs/packages/licensing.md: licensing-9
 meta-33 requires each package's Verification section to verify every behavior in that package.
 `licensing.md` has External Behavior item licensing-9, but none of licensing-3, licensing-4, or licensing-8 cites it.
 This is a defect in the specs.
-
-### `spec_rules::meta_28_irs_are_disposable`
-
-```text
-"specs/intents/000-spdx-headers.md: Verification checks licensing-9, which no licensing test item verifies; deleting the IR loses that check"
-```
-
-meta-28 requires that deleting an IR loses no design or behavior record.
-IR-000's Verification section checks that licensing-9 has no `<...>` placeholder.
-No test item in `licensing.md` verifies licensing-9, so that check exists only in the IR.
-This has the same root cause as the meta-33 failure.
-The suggested fix for both is left to the spec owner: add a Verification item to `licensing.md` that cites licensing-9.
-The other assertions of this test pass: the specs tree lints clean with every IR deleted, and IR-000 defines no spec item and no section beyond meta-5's.
+Suggested fix, left to the spec owner: add a Verification item to `licensing.md` that cites licensing-9.
+`licensing_9_own_files_use_project_license_and_holder` already checks the behavior; only the spec's test item is missing.
 
 No other test failed.
 
@@ -119,6 +109,14 @@ The matrix states each gap; the main causes are:
 - **Identity audit** (git-1) compares the latest non-merge commit with the local `git config`, so it only holds where that commit's author runs the suite.
 - **Derived traits** (meta-34): `Graph` derives `Debug`, `Clone`, and `Default`, so `Graph::default()` and `clone()` are public behavior that `graph.md` does not mention.
   `meta_34_packages_are_complete_and_exact` checks declared public items only and does not flag this.
+- **Audit corrections**<a id="audit-corrections"></a> (first audit round of commit `7f9938d`):
+  - `meta_28` had failed by asserting that every spec item an IR's Verification names is verified by a package test item.
+    meta-28 does not require that.
+    IR-000's placeholder check on licensing-9 is a task-completion check, and `licensing_9_own_files_use_project_license_and_holder` already asserts it, so `7f9938d`'s claim that IR-000 holds the only check of licensing-9 was wrong.
+    The test now asserts that no IR states its own behavior, and it passes.
+  - `meta_13` had asserted only parts of meta-30, meta-11, and meta-14; it now checks that no subject is defined by two packages.
+  - `meta_21` now requires the item ID to be mentioned in a test file that defines a `#[test]`.
+  - The matrix now discloses that meta-21's realization check works by ID mention, and that meta-32 has no instance here and is checked by keyword proxies only.
 - **Tool dependencies**: `licensing_headers`, `spec_tree`, and `spec_rules` need the Spex CLI (`spex` on PATH or `SPEX_BIN`), and the git, licensing, and `spec_rules` tests need a full git clone.
   These tests fail, rather than skip, when either is missing.
 - **Fault detection** was spot-checked by temporary mutations, reverted before the recorded run:
@@ -130,8 +128,10 @@ The matrix states each gap; the main causes are:
   - one spec mutation per new rule failed each corresponding `spec_rules` test (meta-12 and meta-35 by their fixtures):
     - a Given clause in graph-6 failed `meta_7`;
     - a bare `licensing-6` mention in licensing-1 failed `meta_8`;
-    - a citation of git-6 (a Verification item) from graph-1 failed `meta_13`, `meta_15`, and `meta_28` (via `spex lint`);
-    - dropping the `graph-6` mention from `tests/shortest_path.rs` failed `meta_21`;
+    - a citation of git-6 (a Verification item) from graph-1 failed `meta_15` and, via `spex lint` on the IR-less copy, `meta_28`;
+    - git-1 defining behavior of `the graph` failed `meta_13`;
+    - dropping the `graph-6` mention from `tests/shortest_path.rs`, or its `#[test]`, failed `meta_21`;
+    - a `shall` statement in IR-000, and a citation of an undefined item from it, each failed `meta_28`;
     - removing `git.md` from `map.md` failed `meta_23`;
     - a `src/lib.rs` path in DR-000 failed `meta_24`;
     - "mock" in git-6 failed `meta_32`;
