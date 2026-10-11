@@ -22,16 +22,17 @@ Environment: macOS 27.0.1, rustc and cargo 1.96.1, git 2.54.0, Spex CLI 3.0.0 (`
 | Suite | Kind | Tests | Passed | Failed | Ignored |
 | --- | --- | --- | --- | --- | --- |
 | `src/lib.rs` unit tests | unit (implementation) | 8 | 8 | 0 | 0 |
-| `tests/git_conventions.rs` (new) | system (git history) | 5 | 5 | 0 | 0 |
-| `tests/graph_spec.rs` (new) | integration (public API) | 5 | 5 | 0 | 0 |
-| `tests/licensing_headers.rs` (new) | system (repo files) | 6 | 3 | 3 | 0 |
+| `tests/git_conventions.rs` | system (git history) | 5 | 5 | 0 | 0 |
+| `tests/graph_spec.rs` | integration (public API) | 5 | 5 | 0 | 0 |
+| `tests/licensing_headers.rs` | system (repo files) | 6 | 3 | 3 | 0 |
 | `tests/shortest_path.rs` | integration (public API) | 1 | 1 | 0 | 0 |
-| `tests/spec_tree.rs` (new) | system (specs tree, incl. `spex lint`) | 5 | 4 | 1 | 0 |
+| `tests/spec_rules.rs` (new) | system (specs tree, git, `spex lint`) | 12 | 11 | 1 | 0 |
+| `tests/spec_tree.rs` | system (specs tree, incl. `spex lint`) | 5 | 4 | 1 | 0 |
 | Doc-tests | doc example | 1 | 1 | 0 | 0 |
-| **Total** | | **31** | **27** | **4** | **0** |
+| **Total** | | **43** | **38** | **5** | **0** |
 
-New tests: 21 in 4 files; existing tests: 10.
-Before verification the suite had 10 tests, all passing.
+New tests: 12 in 1 file (`tests/spec_rules.rs`), one for each meta item the previous run left Uncovered.
+Before this run the suite had 31 tests: 27 passed and 4 failed, the same 4 that fail below.
 
 ## Failures
 
@@ -65,33 +66,33 @@ behaviors no Verification item cites: ["specs/packages/licensing.md: licensing-9
 meta-33 requires each package's Verification section to verify every behavior in that package.
 `licensing.md` has External Behavior item licensing-9, but none of licensing-3, licensing-4, or licensing-8 cites it.
 This is a defect in the specs.
-Suggested fix, left to the spec owner: add a Verification item to `licensing.md` that cites licensing-9 (IR-000's Verification section already describes the check).
+
+### `spec_rules::meta_28_irs_are_disposable`
+
+```text
+"specs/intents/000-spdx-headers.md: Verification checks licensing-9, which no licensing test item verifies; deleting the IR loses that check"
+```
+
+meta-28 requires that deleting an IR loses no design or behavior record.
+IR-000's Verification section checks that licensing-9 has no `<...>` placeholder.
+No test item in `licensing.md` verifies licensing-9, so that check exists only in the IR.
+This has the same root cause as the meta-33 failure.
+The suggested fix for both is left to the spec owner: add a Verification item to `licensing.md` that cites licensing-9.
+The other assertions of this test pass: the specs tree lints clean with every IR deleted, and IR-000 defines no spec item and no section beyond meta-5's.
 
 No other test failed.
 
 ## Coverage
 
-52 spec items: 12 Covered, 28 Partial, 12 Uncovered.
-Every item in `graph`, `git`, and `licensing` maps to at least one executable test.
+52 spec items: 12 Covered, 40 Partial, 0 Uncovered.
+Every spec item maps to at least one executable test, run in the recorded run.
 
 ### Uncovered items
 
-| Item | Reason |
-| --- | --- |
-| meta-23 | Minimality and concision are editorial judgments |
-| meta-24 | Whether a DR holds decisions, not implementation details, is an editorial judgment |
-| meta-35 | No accepted DR has been changed; nothing observable to test |
-| meta-28 | IR disposability is an editorial judgment |
-| meta-7 | Whether a case "can be expressed" in GWT is a judgment |
-| meta-8 | Whether every reliance is cited is semantic; lint checks only citation form |
-| meta-13 | Package closedness and shared intent are judgments |
-| meta-34 | Package completeness and exactness are judgments |
-| meta-12 | No public release (no tags) exists to check ID stability against |
-| meta-15 | Readability without links is a judgment |
-| meta-21 | Whether a spec test item specifies a unit test is a judgment |
-| meta-32 | Preferring real behaviors over substitutes is a judgment |
-
-These items are review criteria for the specs themselves; they need a human or agent review, not a test.
+None.
+The 12 meta items that were Uncovered before (meta-7, meta-8, meta-12, meta-13, meta-15, meta-21, meta-23, meta-24, meta-28, meta-32, meta-34, meta-35) now each have a test in `tests/spec_rules.rs`.
+Each test checks only the part of its rule that is mechanically decidable, so all 12 are rated Partial.
+The matrix states what each one leaves to human or agent review.
 
 ### Partial items
 
@@ -102,7 +103,10 @@ The matrix states each gap; the main causes are:
 - licensing-1 to licensing-4 and licensing-9: the verdicts depend on the licensing scope, which only the test implements.
 - licensing-5 and licensing-8: no file has an upstream license that differs from the project's, and inclusion preparation has no executable implementation to run on a fixture.
 - licensing-6 and licensing-7: the scope rule and the license-file detector exist only inside the test, which applies them to the spec's examples and to this repo.
-- meta items checked by `spex lint` or by a heuristic, or (meta-33) by citation presence alone, as listed in the matrix.
+- meta items checked by `spex lint`, by a heuristic, or by structure alone.
+  Their semantic parts (minimality, closedness, completeness, stand-alone readability, judgment of "substantive" or "unit-sized") need review, not a test.
+- meta-12 and meta-35 have no instance in this repo (no release tag; DR-000 unchanged), so their repo checks are vacuous.
+  Their checkers also run on constructed fixtures, where they reject the violations.
 
 ## Interpretations and observations
 
@@ -113,11 +117,22 @@ The matrix states each gap; the main causes are:
 - **Merge commit** `5e70f1c` (`Merge pull request #2 ...`) was made by the hosting service and does not follow the git-2 subject format.
   The git audit skips merge commits (`--no-merges`), since git.md does not say whether service-generated merges are in scope.
 - **Identity audit** (git-1) compares the latest non-merge commit with the local `git config`, so it only holds where that commit's author runs the suite.
-- **Tool dependencies**: `licensing_headers` and `spec_tree` need the Spex CLI (`spex` on PATH or `SPEX_BIN`), and the git and licensing tests need a full git clone.
+- **Derived traits** (meta-34): `Graph` derives `Debug`, `Clone`, and `Default`, so `Graph::default()` and `clone()` are public behavior that `graph.md` does not mention.
+  `meta_34_packages_are_complete_and_exact` checks declared public items only and does not flag this.
+- **Tool dependencies**: `licensing_headers`, `spec_tree`, and `spec_rules` need the Spex CLI (`spex` on PATH or `SPEX_BIN`), and the git, licensing, and `spec_rules` tests need a full git clone.
   These tests fail, rather than skip, when either is missing.
 - **Fault detection** was spot-checked by temporary mutations, reverted before the recorded run:
   - making `add_edge` one-directional failed `graph_3` and `graph_5`;
   - ignoring out-of-range `add_edge` failed `graph_1` and `graph_4`;
   - an untracked header-less `.md` failed `licensing_3`, `_4`, and `_9`;
   - a malformed pending message failed three `git_6_*` tests;
-  - overriding `GIT_AUTHOR_NAME` failed `git_6_commit_records_configured_identity`.
+  - overriding `GIT_AUTHOR_NAME` failed `git_6_commit_records_configured_identity`;
+  - one spec mutation per new rule failed each corresponding `spec_rules` test (meta-12 and meta-35 by their fixtures):
+    - a Given clause in graph-6 failed `meta_7`;
+    - a bare `licensing-6` mention in licensing-1 failed `meta_8`;
+    - a citation of git-6 (a Verification item) from graph-1 failed `meta_13`, `meta_15`, and `meta_28` (via `spex lint`);
+    - dropping the `graph-6` mention from `tests/shortest_path.rs` failed `meta_21`;
+    - removing `git.md` from `map.md` failed `meta_23`;
+    - a `src/lib.rs` path in DR-000 failed `meta_24`;
+    - "mock" in git-6 failed `meta_32`;
+    - an unspecified `pub fn` in `src/lib.rs`, and a restated graph-1 statement, each failed `meta_34`.
