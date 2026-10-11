@@ -1,0 +1,75 @@
+{
+  "schema": "sublang.slc.build.v1",
+  "pipeline": "playbook",
+  "source": {
+    "path": "../contrib.md",
+    "hash": "sha256:cf42d4b186025c4984b41c6a430fd10720157d3a60f0c6af3cce664b04e32e09"
+  },
+  "steps": [
+    {
+      "kind": "compile",
+      "name": "text2gears",
+      "target": "contrib.gears.raw.md",
+      "inputs": [
+        "sha256:cf42d4b186025c4984b41c6a430fd10720157d3a60f0c6af3cce664b04e32e09",
+        "sha256:0b80376832f0ed7882b34c1690c5ba569518c0078542d07ac4e5f5c559c4e927",
+        "sha256:cde78eb09e7c38c4cf9f4b1e213197e696ea999e33bdd264f39bc4c3d26f58b0",
+        "sha256:645f9dbaad98235f2302fc7c9c621eb7957af45b3a0b248d2d5d4ca19444c253"
+      ],
+      "output": "sha256:d2d2d1465faca7040d0ac435723dd8dc9ff759c4b00ce0ca0628d66881f71eb1"
+    },
+    {
+      "kind": "compile",
+      "name": "optimize",
+      "target": "contrib.gears.opt1.md",
+      "inputs": [
+        "sha256:d2d2d1465faca7040d0ac435723dd8dc9ff759c4b00ce0ca0628d66881f71eb1",
+        "sha256:3dba7ea6d2922a696f774ff52b51c12065e7891de9968a9f6f06f171010d51ed"
+      ],
+      "output": "sha256:d2d2d1465faca7040d0ac435723dd8dc9ff759c4b00ce0ca0628d66881f71eb1"
+    },
+    {
+      "kind": "compile",
+      "name": "prefix",
+      "target": "contrib.gears.md",
+      "inputs": [
+        "sha256:d2d2d1465faca7040d0ac435723dd8dc9ff759c4b00ce0ca0628d66881f71eb1",
+        "sha256:911687f2a39b0949ce005c6e795f8bf2bc7f8f2094614a8e8f3d46a1da9eee24",
+        "sha256:b3f8e9ba09a559c9f60550fef93a3f9f18bed0627e7f95dc0c8fd70c39e45955",
+        "sha256:a79f8de13ce25185b908fbc0ef5f848db35f100c25086d9033ddcaf9f3f96470"
+      ],
+      "output": "sha256:8c1ed05224e5e4a9846fd3af7a0ae29e9110e80b144dc0457d1e79408e9e218b"
+    },
+    {
+      "kind": "compile",
+      "name": "gears2fsm",
+      "target": "contrib.fsm.ts",
+      "inputs": [
+        "sha256:8c1ed05224e5e4a9846fd3af7a0ae29e9110e80b144dc0457d1e79408e9e218b",
+        "sha256:32d27591591c9ccd52c30a87c3d07c4a68bb975e403d241f07bbc48bf5e5d814",
+        "sha256:e9631c28cef877916e5ada59864419db81064015c1d1ca5e75713a35ae5a23fa",
+        "sha256:05665abfbeca943319bc0d17fb69a022a8914e0c98c08b031304a08eb085317c",
+        "sha256:0b80376832f0ed7882b34c1690c5ba569518c0078542d07ac4e5f5c559c4e927",
+        "sha256:645f9dbaad98235f2302fc7c9c621eb7957af45b3a0b248d2d5d4ca19444c253"
+      ],
+      "output": "sha256:b516b11f8b022967db5de517968818e525a4c6cd557da1d5781d863ac3c69a8a"
+    },
+    {
+      "kind": "link",
+      "name": "link",
+      "target": "contrib.playbook.ts",
+      "inputs": [
+        "sha256:27772af7ba9c9604af5a00dc9a1091808296c811c159f236aab0d2de3644c02b",
+        "sha256:05665abfbeca943319bc0d17fb69a022a8914e0c98c08b031304a08eb085317c",
+        "sha256:4f216ba254418b9e7534607af8b337c37593359e86641284a55f464505e1369a",
+        "sha256:32d27591591c9ccd52c30a87c3d07c4a68bb975e403d241f07bbc48bf5e5d814",
+        "sha256:60d4254c37d64454da9160fbb0d8f63911ca73a78fe927be94ee2073646c12d1",
+        "sha256:3dba7ea6d2922a696f774ff52b51c12065e7891de9968a9f6f06f171010d51ed",
+        "sha256:0b80376832f0ed7882b34c1690c5ba569518c0078542d07ac4e5f5c559c4e927",
+        "sha256:645f9dbaad98235f2302fc7c9c621eb7957af45b3a0b248d2d5d4ca19444c253",
+        "sha256:8beb7ecdbbcd029ce5e925171ecd1ff4ecbe4bed1f1654354611f28f9cf79d8e"
+      ],
+      "output": "sha256:ecd8f8bed8ce6e9ccf4dae123a876ed8ef7b53ce0dfba907bb771989e5394eb4"
+    }
+  ]
+}
