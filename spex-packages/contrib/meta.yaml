@@ -1,7 +1,8 @@
 format: 2
-org: slgamma
+org: claude-workshop-261011
 name: contrib
 version: 0.1.0
+license: Apache-2.0
 description: Implement an issue on its own branch, review it in up to two rounds, and open a pull request
 artifacts:
   contrib:
