@@ -157,13 +157,25 @@ fn git_6_commit_records_configured_identity() {
     let name = git(&["config", "user.name"]).trim().to_owned();
     let email = git(&["config", "user.email"]).trim().to_owned();
     assert!(!name.is_empty() && !email.is_empty(), "user.name and user.email must be configured");
-    if std::env::var("GIT_AUDIT_MESSAGE_FILE").is_err() {
-        // HEAD is the latest prepared commit; merges made by a hosting
-        // service are not prepared by the commit workflow.
-        let head = git(&["rev-list", "--no-merges", "-1", "HEAD"]);
-        let ident = git(&["log", "-1", "--format=%an%n%ae%n%cn%n%ce", head.trim()]);
-        let ident: Vec<&str> = ident.lines().collect();
-        assert_eq!(ident, vec![&name[..], &email[..], &name[..], &email[..]], "author/committer of {}", head.trim());
+    let configured = format!("{name} <{email}>");
+
+    // The latest committed, prepared commit (merges made by a hosting
+    // service are not prepared by the commit workflow).
+    let head = git(&["rev-list", "--no-merges", "-1", "HEAD"]);
+    let ident = git(&["log", "-1", "--format=%an <%ae>%n%cn <%ce>", head.trim()]);
+    let ident: Vec<&str> = ident.lines().collect();
+    assert_eq!(ident, vec![&configured[..], &configured[..]], "author/committer of {}", head.trim());
+
+    // The pending commit: the identity Git will record for it.
+    if std::env::var("GIT_AUDIT_MESSAGE_FILE").is_ok() {
+        for var in ["GIT_AUTHOR_IDENT", "GIT_COMMITTER_IDENT"] {
+            let ident = git(&["var", var]);
+            assert!(
+                ident.starts_with(&format!("{configured} ")),
+                "pending {var} `{}` is not {configured}",
+                ident.trim()
+            );
+        }
     }
 }
 
