@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2026 Gamma Sublang <gamma@sublang.ai>
 
-//! Verifies the External Behavior items graph-1 through graph-5 in
+//! Verifies the External Behavior items graph-1 through graph-8 in
 //! specs/packages/graph.md, one test per item, through the public API.
 
 use std::collections::BTreeSet;
@@ -151,4 +151,51 @@ fn graph_5_shortest_path_cases() {
             .unwrap_or_else(|| panic!("{from} -> {to} is reachable"));
         assert_valid_path(&path, from, to, &edges, dist);
     }
+}
+
+/// Records the nodes a traversal passes to its visitor, in call order.
+fn visits(traverse: impl FnOnce(&mut dyn FnMut(NodeId))) -> Vec<NodeId> {
+    let mut order = Vec::new();
+    traverse(&mut |n| order.push(n));
+    order
+}
+
+/// Graph for graph-7 and graph-8: a tree branch, a cycle, a self-loop, a
+/// repeated edge, and a separate component.
+///
+///   0 - 1 - 3        6 - 7
+///   |   |
+///   2 - 4 - 5
+const TRAVERSAL_EDGES: [(NodeId, NodeId); 9] =
+    [(0, 1), (0, 2), (1, 3), (1, 4), (2, 4), (4, 5), (4, 4), (2, 0), (6, 7)];
+
+/// graph-7: `bfs` visits each reachable node once, in discovery order.
+#[test]
+fn graph_7_bfs_visits_in_breadth_first_order() {
+    let g = build(8, &TRAVERSAL_EDGES);
+    assert_eq!(visits(|v| g.bfs(0, v)), vec![0, 1, 2, 3, 4, 5]);
+    assert_eq!(visits(|v| g.bfs(5, v)), vec![5, 4, 1, 2, 0, 3]);
+    assert_eq!(visits(|v| g.bfs(7, v)), vec![7, 6]);
+    assert_eq!(visits(|v| build(1, &[]).bfs(0, v)), vec![0]);
+    // `start` is not a node.
+    assert_eq!(visits(|v| g.bfs(8, v)), vec![]);
+    assert_eq!(visits(|v| Graph::new().bfs(0, v)), vec![]);
+}
+
+/// graph-8: `dfs` visits each reachable node once, in depth-first preorder.
+#[test]
+fn graph_8_dfs_visits_in_depth_first_preorder() {
+    let g = build(8, &TRAVERSAL_EDGES);
+    assert_eq!(visits(|v| g.dfs(0, v)), vec![0, 1, 3, 4, 2, 5]);
+    assert_eq!(visits(|v| g.dfs(5, v)), vec![5, 4, 1, 0, 2, 3]);
+    assert_eq!(visits(|v| g.dfs(7, v)), vec![7, 6]);
+    assert_eq!(visits(|v| build(1, &[]).dfs(0, v)), vec![0]);
+    // `start` is not a node.
+    assert_eq!(visits(|v| g.dfs(8, v)), vec![]);
+    assert_eq!(visits(|v| Graph::new().dfs(0, v)), vec![]);
+
+    // A long path is traversed without exhausting the call stack.
+    let n = 200_000;
+    let path: Vec<(NodeId, NodeId)> = (1..n).map(|i| (i - 1, i)).collect();
+    assert_eq!(visits(|v| build(n, &path).dfs(0, v)), (0..n).collect::<Vec<_>>());
 }

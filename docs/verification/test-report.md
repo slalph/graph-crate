@@ -23,16 +23,17 @@ Environment: macOS 27.0.1, rustc and cargo 1.96.1, git 2.54.0, Spex CLI 3.0.0 (`
 | --- | --- | --- | --- | --- | --- |
 | `src/lib.rs` unit tests | unit (implementation) | 8 | 8 | 0 | 0 |
 | `tests/git_conventions.rs` | system (git history) | 5 | 5 | 0 | 0 |
-| `tests/graph_spec.rs` | integration (public API) | 5 | 5 | 0 | 0 |
+| `tests/graph_spec.rs` | integration (public API) | 7 | 7 | 0 | 0 |
 | `tests/licensing_headers.rs` | system (repo files) | 6 | 3 | 3 | 0 |
 | `tests/shortest_path.rs` | integration (public API) | 1 | 1 | 0 | 0 |
-| `tests/spec_rules.rs` (new) | system (specs tree, git, `spex lint`) | 12 | 12 | 0 | 0 |
+| `tests/spec_rules.rs` | system (specs tree, git, `spex lint`) | 12 | 12 | 0 | 0 |
 | `tests/spec_tree.rs` | system (specs tree, incl. `spex lint`) | 5 | 4 | 1 | 0 |
+| `tests/traversal.rs` (new) | integration (public API) | 1 | 1 | 0 | 0 |
 | Doc-tests | doc example | 1 | 1 | 0 | 0 |
-| **Total** | | **43** | **39** | **4** | **0** |
+| **Total** | | **46** | **42** | **4** | **0** |
 
-New tests: 12 in 1 file (`tests/spec_rules.rs`), one for each meta item the previous run left Uncovered.
-Before this run the suite had 31 tests: 27 passed and 4 failed, the same 4 that fail below.
+New tests: 3 for the `bfs` and `dfs` traversals (graph-7 to graph-9): 2 in `tests/graph_spec.rs` and 1 in the new `tests/traversal.rs`.
+Before this run the suite had 43 tests: 39 passed and 4 failed, the same 4 that fail below.
 The first audit round led to rewritten tests for meta-13, meta-21, and meta-28, and to corrected gap statements for meta-13, meta-21, meta-28, and meta-32 (see [Audit corrections](#audit-corrections)).
 
 ## Failures
@@ -74,7 +75,7 @@ No other test failed.
 
 ## Coverage
 
-52 spec items: 12 Covered, 40 Partial, 0 Uncovered.
+55 spec items: 15 Covered, 40 Partial, 0 Uncovered.
 Every spec item maps to at least one executable test, run in the recorded run.
 
 ### Uncovered items

@@ -21,6 +21,7 @@ Test paths:
 
 - `GS` = `tests/graph_spec.rs`
 - `SP` = `tests/shortest_path.rs`
+- `TR` = `tests/traversal.rs`
 - `GC` = `tests/git_conventions.rs`
 - `LH` = `tests/licensing_headers.rs`
 - `ST` = `tests/spec_tree.rs`
@@ -31,11 +32,11 @@ Test paths:
 
 | Package | Items | Covered | Partial | Uncovered |
 | --- | --- | --- | --- | --- |
-| graph | 6 | 6 | 0 | 0 |
+| graph | 9 | 9 | 0 | 0 |
 | git | 6 | 0 | 6 | 0 |
 | licensing | 9 | 0 | 9 | 0 |
 | meta | 31 | 6 | 25 | 0 |
-| **Total** | **52** | **12** | **40** | **0** |
+| **Total** | **55** | **15** | **40** | **0** |
 
 ## graph (`specs/packages/graph.md`)
 
@@ -47,6 +48,9 @@ Test paths:
 | graph-4 | GS `graph_4_add_edge_with_unknown_node_panics`; SP `shortest_path_through_public_api`; UT `add_edge_to_unknown_node_panics` | ✅ ✅ ✅ | Covered | — |
 | graph-5 | GS `graph_5_shortest_path_cases`; SP `shortest_path_through_public_api`; UT `path_to_self_is_single_node`, `picks_shortest_of_several_paths`, `handles_cycles_and_self_loops`, `unreachable_returns_none`, `unknown_node_returns_none`; DT `src/lib.rs - (line 8)` | ✅ ✅ ✅ ✅ ✅ ✅ ✅ ✅ | Covered | — |
 | graph-6 | SP `shortest_path_through_public_api` | ✅ | Covered | — |
+| graph-7 | GS `graph_7_bfs_visits_in_breadth_first_order`; TR `traversals_handle_a_cycle_and_a_disconnected_node` | ✅ ✅ | Covered | — |
+| graph-8 | GS `graph_8_dfs_visits_in_depth_first_preorder`; TR `traversals_handle_a_cycle_and_a_disconnected_node` | ✅ ✅ | Covered | — |
+| graph-9 | TR `traversals_handle_a_cycle_and_a_disconnected_node` | ✅ | Covered | — |
 
 ## git (`specs/packages/git.md`)
 
