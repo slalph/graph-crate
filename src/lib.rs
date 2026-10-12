@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2026 Gamma Sublang <gamma@sublang.ai>
 
-//! A small undirected graph with a breadth-first shortest-path query.
+//! A small undirected graph with a breadth-first shortest-path query and
+//! breadth-first and depth-first traversals.
 //!
 //! # Example
 //!
@@ -95,6 +96,62 @@ impl Graph {
             }
         }
         None
+    }
+
+    /// Calls `visit` once for each node reachable from `start`, `start`
+    /// included, in breadth-first order.
+    ///
+    /// Neighbors are explored in the order their edges were added. Does
+    /// nothing if `start` is not a node of this graph.
+    pub fn bfs(&self, start: NodeId, mut visit: impl FnMut(NodeId)) {
+        let n = self.adjacency.len();
+        if start >= n {
+            return;
+        }
+        let mut discovered = vec![false; n];
+        let mut queue = VecDeque::from([start]);
+        discovered[start] = true;
+        while let Some(node) = queue.pop_front() {
+            visit(node);
+            for &next in &self.adjacency[node] {
+                if !discovered[next] {
+                    discovered[next] = true;
+                    queue.push_back(next);
+                }
+            }
+        }
+    }
+
+    /// Calls `visit` once for each node reachable from `start`, `start`
+    /// included, in depth-first preorder.
+    ///
+    /// Neighbors are explored in the order their edges were added. Does
+    /// nothing if `start` is not a node of this graph.
+    pub fn dfs(&self, start: NodeId, mut visit: impl FnMut(NodeId)) {
+        let n = self.adjacency.len();
+        if start >= n {
+            return;
+        }
+        let mut visited = vec![false; n];
+        // Each frame is a node and the index of its next neighbor to try.
+        let mut stack = vec![(start, 0)];
+        visited[start] = true;
+        visit(start);
+        while let Some((node, i)) = stack.last_mut() {
+            match self.adjacency[*node].get(*i) {
+                None => {
+                    stack.pop();
+                }
+                Some(&next) => {
+                    *i += 1;
+                    if !visited[next] {
+                        visited[next] = true;
+                        visit(next);
+                        stack.push((next, 0));
+                    }
+                }
+            }
+        }
     }
 }
 

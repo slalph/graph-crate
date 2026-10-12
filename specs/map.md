@@ -31,6 +31,6 @@ meta.md       The spec of specs
 
 | File | Summary |
 | --- | --- |
-| [graph.md](packages/graph.md) | Undirected graph with BFS shortest-path query |
+| [graph.md](packages/graph.md) | Undirected graph with BFS shortest-path query and BFS/DFS traversal |
 | [git.md](packages/git.md) | Commit message format and AI co-authorship trailers |
 | [licensing.md](packages/licensing.md) | SPDX header requirements and verification checks |
